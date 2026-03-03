@@ -283,3 +283,98 @@ contract WizardFinance {
         return portfolioTokenBalance[portfolioId][token];
     }
 
+    function getClientPortfolioIds(address client) external view returns (uint256[] memory) {
+        return clientPortfolioIds[client];
+    }
+
+    function getGlobalStats() external view returns (
+        uint256 totalDeposits_,
+        uint256 totalWithdrawn_,
+        uint256 totalFeesCollected_,
+        uint256 advisorCount_,
+        uint256 portfolioCount_,
+        bool paused_
+    ) {
+        return (totalDeposits, totalWithdrawn, totalFeesCollected, advisorCount, portfolioCount, wfPaused);
+    }
+
+    function _updateClientTier(address client) internal {
+        uint256 total = 0;
+        uint256[] storage ids = clientPortfolioIds[client];
+        for (uint256 i = 0; i < ids.length; i++) {
+            total += wfPortfolios[ids[i]].totalDeposited - wfPortfolios[ids[i]].totalWithdrawn;
+        }
+        uint8 newTier = 0;
+        if (total >= WF_TIER_PLATINUM_MIN) newTier = 4;
+        else if (total >= WF_TIER_GOLD_MIN) newTier = 3;
+        else if (total >= WF_TIER_SILVER_MIN) newTier = 2;
+        else if (total >= WF_TIER_BRONZE_MIN) newTier = 1;
+        if (newTier != clientTier[client]) {
+            clientTier[client] = newTier;
+            emit WF_ClientTierUpdated(client, newTier);
+        }
+    }
+
+    function _sendEth(address to, uint256 amount) internal {
+        (bool ok,) = to.call{value: amount}("");
+        if (!ok) revert WF_TransferFailed();
+    }
+
+    function _pullToken(address token, address from, uint256 amount) internal {
+        (bool ok, bytes memory data) = token.call(abi.encodeWithSelector(IERC20Min.transferFrom.selector, from, address(this), amount));
+        if (!ok || (data.length >= 32 && abi.decode(data, (bool)) == false)) revert WF_TransferFailed();
+    }
+
+    function _pushToken(address token, address to, uint256 amount) internal {
+        (bool ok, bytes memory data) = token.call(abi.encodeWithSelector(IERC20Min.transfer.selector, to, amount));
+        if (!ok || (data.length >= 32 && abi.decode(data, (bool)) == false)) revert WF_TransferFailed();
+    }
+
+    uint256 public constant WF_ADVISOR_NAME_MAX_LEN = 64;
+    uint256 public constant WF_PORTFOLIO_NOTE_MAX_LEN = 256;
+    uint256 public constant WF_TIER_NONE = 0;
+    uint256 public constant WF_TIER_BRONZE_ID = 1;
+    uint256 public constant WF_TIER_SILVER_ID = 2;
+    uint256 public constant WF_TIER_GOLD_ID = 3;
+    uint256 public constant WF_TIER_PLATINUM_ID = 4;
+    bytes32 public constant WF_PORTFOLIO_CREATE_TYPEHASH = keccak256("WF_PortfolioCreate(address client,uint256 advisorId,uint256 nonce)");
+
+    function getPortfolioNet(uint256 portfolioId) external view returns (uint256) {
+        if (portfolioId == 0 || portfolioId > portfolioCount) revert WF_InvalidPortfolioId();
+        WFPortfolio storage p = wfPortfolios[portfolioId];
+        return p.totalDeposited - p.totalWithdrawn;
+    }
+
+    function getClientTier(address client) external view returns (uint8) {
+        return clientTier[client];
+    }
+
+    function getTierForTotal(uint256 totalWei) external pure returns (uint8) {
+        if (totalWei >= WF_TIER_PLATINUM_MIN) return 4;
+        if (totalWei >= WF_TIER_GOLD_MIN) return 3;
+        if (totalWei >= WF_TIER_SILVER_MIN) return 2;
+        if (totalWei >= WF_TIER_BRONZE_MIN) return 1;
+        return 0;
+    }
+
+    function getAdvisorId(address wallet) external view returns (uint256) {
+        return advisorIdByWallet[wallet];
+    }
+
+    function isAdvisorActive(uint256 advisorId) external view returns (bool) {
+        if (advisorId == 0 || advisorId > advisorCount) return false;
+        return wfAdvisors[advisorId].active;
+    }
+
+    function getAdvisorWallet(uint256 advisorId) external view returns (address) {
+        if (advisorId == 0 || advisorId > advisorCount) return address(0);
+        return wfAdvisors[advisorId].wallet;
+    }
+
+    function getPortfolioClient(uint256 portfolioId) external view returns (address) {
+        if (portfolioId == 0 || portfolioId > portfolioCount) revert WF_InvalidPortfolioId();
+        return wfPortfolios[portfolioId].client;
+    }
+
+    function getPortfolioAdvisorId(uint256 portfolioId) external view returns (uint256) {
+        if (portfolioId == 0 || portfolioId > portfolioCount) revert WF_InvalidPortfolioId();
