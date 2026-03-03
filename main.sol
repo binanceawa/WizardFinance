@@ -758,3 +758,98 @@ contract WizardFinance {
             totalFeesCollected,
             advisorCount,
             portfolioCount,
+            wfPaused,
+            owner,
+            block.chainid
+        );
+    }
+
+    function getTierThreshold(uint8 tierId) external pure returns (uint256) {
+        if (tierId == 0) return 0;
+        if (tierId == 1) return WF_TIER_BRONZE_MIN;
+        if (tierId == 2) return WF_TIER_SILVER_MIN;
+        if (tierId == 3) return WF_TIER_GOLD_MIN;
+        if (tierId == 4) return WF_TIER_PLATINUM_MIN;
+        return 0;
+    }
+
+    function getVersion() external pure returns (uint256) { return WF_VERSION; }
+
+    function getAdvisorIds() external view returns (uint256[] memory ids) {
+        ids = new uint256[](advisorCount);
+        for (uint256 i = 0; i < advisorCount; i++) ids[i] = i + 1;
+    }
+
+    function getPortfolioIds() external view returns (uint256[] memory ids) {
+        ids = new uint256[](portfolioCount);
+        for (uint256 i = 0; i < portfolioCount; i++) ids[i] = i + 1;
+    }
+
+    function getAdvisorWalletFor(uint256 advisorId) external view returns (address) {
+        if (advisorId == 0 || advisorId > advisorCount) return address(0);
+        return wfAdvisors[advisorId].wallet;
+    }
+
+    function getAdvisorActiveFor(uint256 advisorId) external view returns (bool) {
+        if (advisorId == 0 || advisorId > advisorCount) return false;
+        return wfAdvisors[advisorId].active;
+    }
+
+    function getPortfolioClientFor(uint256 portfolioId) external view returns (address) {
+        if (portfolioId == 0 || portfolioId > portfolioCount) return address(0);
+        return wfPortfolios[portfolioId].client;
+    }
+
+    function getPortfolioAdvisorFor(uint256 portfolioId) external view returns (uint256) {
+        if (portfolioId == 0 || portfolioId > portfolioCount) return 0;
+        return wfPortfolios[portfolioId].advisorId;
+    }
+
+    function getPortfolioClosedFor(uint256 portfolioId) external view returns (bool) {
+        if (portfolioId == 0 || portfolioId > portfolioCount) return true;
+        return wfPortfolios[portfolioId].closed;
+    }
+
+    function getPortfolioNetFor(uint256 portfolioId) external view returns (uint256) {
+        if (portfolioId == 0 || portfolioId > portfolioCount) return 0;
+        WFPortfolio storage p = wfPortfolios[portfolioId];
+        return p.totalDeposited - p.totalWithdrawn;
+    }
+
+    function getClientTierFor(address client) external view returns (uint8) {
+        return clientTier[client];
+    }
+
+    function getClientNonce(address client) external view returns (uint256) {
+        return clientNonce[client];
+    }
+
+    function getLastAdviceBlock(uint256 advisorId) external view returns (uint256) {
+        return lastAdviceBlockByAdvisor[advisorId];
+    }
+
+    function getPortfolioAllocationLength(uint256 portfolioId) external view returns (uint256) {
+        return portfolioAllocations[portfolioId].length;
+    }
+
+    function getPortfolioTokenBalanceFor(uint256 portfolioId, address token) external view returns (uint256) {
+        return portfolioTokenBalance[portfolioId][token];
+    }
+
+    function wfBps() external pure returns (uint256) { return WF_BPS; }
+    function wfMaxAdvisors() external pure returns (uint256) { return WF_MAX_ADVISORS; }
+    function wfMaxPortfoliosPerClient() external pure returns (uint256) { return WF_MAX_PORTFOLIOS_PER_CLIENT; }
+    function wfAdvisorFeeBps() external pure returns (uint256) { return WF_ADVISOR_FEE_BPS; }
+    function wfPlatformFeeBps() external pure returns (uint256) { return WF_PLATFORM_FEE_BPS; }
+    function wfMinDeposit() external pure returns (uint256) { return WF_MIN_DEPOSIT; }
+    function wfMaxDepositSingle() external pure returns (uint256) { return WF_MAX_DEPOSIT_SINGLE; }
+    function wfTierBronzeMin() external pure returns (uint256) { return WF_TIER_BRONZE_MIN; }
+    function wfTierSilverMin() external pure returns (uint256) { return WF_TIER_SILVER_MIN; }
+    function wfTierGoldMin() external pure returns (uint256) { return WF_TIER_GOLD_MIN; }
+    function wfTierPlatinumMin() external pure returns (uint256) { return WF_TIER_PLATINUM_MIN; }
+
+    function getOwnerAddress() external view returns (address) { return owner; }
+    function getPausedStatus() external view returns (bool) { return wfPaused; }
+    function getAdvisorCountValue() external view returns (uint256) { return advisorCount; }
+    function getPortfolioCountValue() external view returns (uint256) { return portfolioCount; }
+    function getTotalDepositsValue() external view returns (uint256) { return totalDeposits; }
