@@ -1043,3 +1043,98 @@ contract WizardFinance {
     function getClientTotalNet(address client) external view returns (uint256) {
         return getClientTotalDeposited(client) - getClientTotalWithdrawn(client);
     }
+
+    function getGlobalStatsShort() external view returns (uint256 dep_, uint256 with_, uint256 fees_, uint256 adv_, uint256 port_) {
+        return (totalDeposits, totalWithdrawn, totalFeesCollected, advisorCount, portfolioCount);
+    }
+
+    function getFeeBreakdown(uint256 amount) external pure returns (uint256 toAdvisor, uint256 toPlatform, uint256 toClient) {
+        toAdvisor = (amount * WF_ADVISOR_FEE_BPS) / WF_BPS;
+        toPlatform = (amount * WF_PLATFORM_FEE_BPS) / WF_BPS;
+        toClient = amount - toAdvisor - toPlatform;
+    }
+
+    function getBpsDenominator() external pure returns (uint256) { return WF_BPS; }
+    function getMaxAdvisors() external pure returns (uint256) { return WF_MAX_ADVISORS; }
+    function getMaxPortfoliosPerClient() external pure returns (uint256) { return WF_MAX_PORTFOLIOS_PER_CLIENT; }
+    function getAdvisorFeeBps() external pure returns (uint256) { return WF_ADVISOR_FEE_BPS; }
+    function getPlatformFeeBps() external pure returns (uint256) { return WF_PLATFORM_FEE_BPS; }
+    function getMinDepositWei() external pure returns (uint256) { return WF_MIN_DEPOSIT; }
+    function getMaxDepositWei() external pure returns (uint256) { return WF_MAX_DEPOSIT_SINGLE; }
+
+    function getTreasury() external view returns (address) { return wfTreasury; }
+    function getRegistryKeeper() external view returns (address) { return wfRegistryKeeper; }
+    function getFeeVault() external view returns (address) { return wfFeeVault; }
+    function getGenesisBlockNumber() external view returns (uint256) { return wfGenesisBlock; }
+    function getDomainSeparatorValue() external view returns (bytes32) { return wfDomainSeparator; }
+
+    function getOwnerAddr() external view returns (address) { return owner; }
+    function getPausedFlag() external view returns (bool) { return wfPaused; }
+    function getAdvisorCountNum() external view returns (uint256) { return advisorCount; }
+    function getPortfolioCountNum() external view returns (uint256) { return portfolioCount; }
+    function getTotalDepositsNum() external view returns (uint256) { return totalDeposits; }
+    function getTotalWithdrawnNum() external view returns (uint256) { return totalWithdrawn; }
+    function getTotalFeesNum() external view returns (uint256) { return totalFeesCollected; }
+
+    function wfTreasuryAddr() external view returns (address) { return wfTreasury; }
+    function wfRegistryKeeperAddr() external view returns (address) { return wfRegistryKeeper; }
+    function wfFeeVaultAddr() external view returns (address) { return wfFeeVault; }
+
+    function portfolioBelongsToClient(uint256 portfolioId, address client) external view returns (bool) {
+        if (portfolioId == 0 || portfolioId > portfolioCount) return false;
+        return wfPortfolios[portfolioId].client == client;
+    }
+
+    function portfolioManagedByAdvisor(uint256 portfolioId, uint256 advisorId) external view returns (bool) {
+        if (portfolioId == 0 || portfolioId > portfolioCount) return false;
+        return wfPortfolios[portfolioId].advisorId == advisorId;
+    }
+
+    function canCreatePortfolio(address client, uint256 advisorId) external view returns (bool) {
+        if (advisorId == 0 || advisorId > advisorCount) return false;
+        if (!wfAdvisors[advisorId].active) return false;
+        return clientPortfolioIds[client].length < WF_MAX_PORTFOLIOS_PER_CLIENT;
+    }
+
+    function getNetDepositsGlobal() external view returns (uint256) {
+        return totalDeposits > totalWithdrawn ? totalDeposits - totalWithdrawn : 0;
+    }
+
+    function getVersionConstant() external pure returns (uint256) { return WF_VERSION; }
+    function getSeedConstant() external pure returns (uint256) { return WF_SEED; }
+
+    function getAllocationAtSafe(uint256 portfolioId, uint256 index) external view returns (address token_, uint256 amount_, uint256 atBlock_) {
+        if (portfolioId == 0 || portfolioId > portfolioCount) return (address(0), 0, 0);
+        WFAllocation[] storage arr = portfolioAllocations[portfolioId];
+        if (index >= arr.length) return (address(0), 0, 0);
+        WFAllocation storage a = arr[index];
+        return (a.token, a.amount, a.atBlock);
+    }
+
+    function getPortfolioIdsForClient(address client) external view returns (uint256[] memory) {
+        return clientPortfolioIds[client];
+    }
+
+    function getAdvisorWallet(uint256 id) external view returns (address) {
+        if (id == 0 || id > advisorCount) return address(0);
+        return wfAdvisors[id].wallet;
+    }
+
+    function getAdvisorActive(uint256 id) external view returns (bool) {
+        if (id == 0 || id > advisorCount) return false;
+        return wfAdvisors[id].active;
+    }
+
+    function getAdvisorTotalClients(uint256 id) external view returns (uint256) {
+        if (id == 0 || id > advisorCount) return 0;
+        return wfAdvisors[id].totalClients;
+    }
+
+    function getAdvisorTotalFees(uint256 id) external view returns (uint256) {
+        if (id == 0 || id > advisorCount) return 0;
+        return wfAdvisors[id].totalFeesEarned;
+    }
+
+    function getAdvisorRegisteredBlock(uint256 id) external view returns (uint256) {
+        if (id == 0 || id > advisorCount) return 0;
+        return wfAdvisors[id].registeredAtBlock;
