@@ -378,3 +378,98 @@ contract WizardFinance {
 
     function getPortfolioAdvisorId(uint256 portfolioId) external view returns (uint256) {
         if (portfolioId == 0 || portfolioId > portfolioCount) revert WF_InvalidPortfolioId();
+        return wfPortfolios[portfolioId].advisorId;
+    }
+
+    function getPortfolioClosed(uint256 portfolioId) external view returns (bool) {
+        if (portfolioId == 0 || portfolioId > portfolioCount) return true;
+        return wfPortfolios[portfolioId].closed;
+    }
+
+    function getAllocationCount(uint256 portfolioId) external view returns (uint256) {
+        return portfolioAllocations[portfolioId].length;
+    }
+
+    function getAllocationAt(uint256 portfolioId, uint256 index) external view returns (address token_, uint256 amount_, uint256 atBlock_) {
+        WFAllocation storage a = portfolioAllocations[portfolioId][index];
+        return (a.token, a.amount, a.atBlock);
+    }
+
+    function getImmutableAddresses() external view returns (address treasury_, address keeper_, address feeVault_) {
+        return (wfTreasury, wfRegistryKeeper, wfFeeVault);
+    }
+
+    function getGenesisBlock() external view returns (uint256) {
+        return wfGenesisBlock;
+    }
+
+    function getDomainSeparator() external view returns (bytes32) {
+        return wfDomainSeparator;
+    }
+
+    function getConstantsBundle() external pure returns (
+        uint256 bps,
+        uint256 maxAdvisors,
+        uint256 maxPortfoliosPerClient,
+        uint256 advisorFeeBps,
+        uint256 platformFeeBps,
+        uint256 minDeposit,
+        uint256 maxDepositSingle,
+        uint256 tierBronzeMin,
+        uint256 tierSilverMin,
+        uint256 tierGoldMin,
+        uint256 tierPlatinumMin
+    ) {
+        return (
+            WF_BPS,
+            WF_MAX_ADVISORS,
+            WF_MAX_PORTFOLIOS_PER_CLIENT,
+            WF_ADVISOR_FEE_BPS,
+            WF_PLATFORM_FEE_BPS,
+            WF_MIN_DEPOSIT,
+            WF_MAX_DEPOSIT_SINGLE,
+            WF_TIER_BRONZE_MIN,
+            WF_TIER_SILVER_MIN,
+            WF_TIER_GOLD_MIN,
+            WF_TIER_PLATINUM_MIN
+        );
+    }
+
+    function getDepositFeeWei(uint256 amount) external pure returns (uint256 advisorFee, uint256 platformFee) {
+        advisorFee = (amount * WF_ADVISOR_FEE_BPS) / WF_BPS;
+        platformFee = (amount * WF_PLATFORM_FEE_BPS) / WF_BPS;
+    }
+
+    function getNetDepositAmount(uint256 amount) external pure returns (uint256) {
+        uint256 advisorFee = (amount * WF_ADVISOR_FEE_BPS) / WF_BPS;
+        uint256 platformFee = (amount * WF_PLATFORM_FEE_BPS) / WF_BPS;
+        return amount - advisorFee - platformFee;
+    }
+
+    function getAdvisorIdsPaginated(uint256 offset, uint256 limit) external view returns (uint256[] memory ids) {
+        if (offset >= advisorCount) return new uint256[](0);
+        uint256 end = offset + limit;
+        if (end > advisorCount) end = advisorCount;
+        uint256 len = end - offset;
+        ids = new uint256[](len);
+        for (uint256 i = 0; i < len; i++) ids[i] = offset + i + 1;
+    }
+
+    function getPortfolioIdsPaginated(uint256 offset, uint256 limit) external view returns (uint256[] memory ids) {
+        if (offset >= portfolioCount) return new uint256[](0);
+        uint256 end = offset + limit;
+        if (end > portfolioCount) end = portfolioCount;
+        uint256 len = end - offset;
+        ids = new uint256[](len);
+        for (uint256 i = 0; i < len; i++) ids[i] = offset + i + 1;
+    }
+
+    function getActiveAdvisorIds() external view returns (uint256[] memory ids) {
+        uint256 count = 0;
+        for (uint256 i = 1; i <= advisorCount; i++) {
+            if (wfAdvisors[i].active) count++;
+        }
+        ids = new uint256[](count);
+        uint256 j = 0;
+        for (uint256 i = 1; i <= advisorCount; i++) {
+            if (wfAdvisors[i].active) {
