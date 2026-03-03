@@ -853,3 +853,98 @@ contract WizardFinance {
     function getAdvisorCountValue() external view returns (uint256) { return advisorCount; }
     function getPortfolioCountValue() external view returns (uint256) { return portfolioCount; }
     function getTotalDepositsValue() external view returns (uint256) { return totalDeposits; }
+    function getTotalWithdrawnValue() external view returns (uint256) { return totalWithdrawn; }
+    function getTotalFeesCollectedValue() external view returns (uint256) { return totalFeesCollected; }
+
+    function getContractAddress() external view returns (address) { return address(this); }
+    function getBlockTimestamp() external view returns (uint256) { return block.timestamp; }
+    function getChainIdValue() external view returns (uint256) { return block.chainid; }
+
+    function hasPortfolio(address client, uint256 portfolioId) external view returns (bool) {
+        uint256[] storage ids = clientPortfolioIds[client];
+        for (uint256 i = 0; i < ids.length; i++) {
+            if (ids[i] == portfolioId) return true;
+        }
+        return false;
+    }
+
+    function isPortfolioOpen(uint256 portfolioId) external view returns (bool) {
+        if (portfolioId == 0 || portfolioId > portfolioCount) return false;
+        return !wfPortfolios[portfolioId].closed;
+    }
+
+    function getAdvisorPortfolioCount(uint256 advisorId) external view returns (uint256 count) {
+        for (uint256 i = 1; i <= portfolioCount; i++) {
+            if (wfPortfolios[i].advisorId == advisorId) count++;
+        }
+    }
+
+    function getAdvisorOpenPortfolioCount(uint256 advisorId) external view returns (uint256 count) {
+        for (uint256 i = 1; i <= portfolioCount; i++) {
+            WFPortfolio storage p = wfPortfolios[i];
+            if (p.advisorId == advisorId && !p.closed) count++;
+        }
+    }
+
+    function getPortfolioSummary(uint256 portfolioId) external view returns (
+        address client_,
+        uint256 advisorId_,
+        uint256 netWei_,
+        bool closed_
+    ) {
+        if (portfolioId == 0 || portfolioId > portfolioCount) revert WF_InvalidPortfolioId();
+        WFPortfolio storage p = wfPortfolios[portfolioId];
+        return (
+            p.client,
+            p.advisorId,
+            p.totalDeposited - p.totalWithdrawn,
+            p.closed
+        );
+    }
+
+    function getAdvisorSummary(uint256 advisorId) external view returns (
+        address wallet_,
+        bool active_,
+        uint256 clients_,
+        uint256 feesEarned_
+    ) {
+        if (advisorId == 0 || advisorId > advisorCount) revert WF_InvalidAdvisorId();
+        WFAdvisor storage a = wfAdvisors[advisorId];
+        return (a.wallet, a.active, a.totalClients, a.totalFeesEarned);
+    }
+
+    function estimateDepositFees(uint256 amount) external pure returns (uint256 advisorFee_, uint256 platformFee_, uint256 net_) {
+        advisorFee_ = (amount * WF_ADVISOR_FEE_BPS) / WF_BPS;
+        platformFee_ = (amount * WF_PLATFORM_FEE_BPS) / WF_BPS;
+        net_ = amount - advisorFee_ - platformFee_;
+    }
+
+    function validateDepositAmount(uint256 amount) external pure returns (bool) {
+        return amount >= WF_MIN_DEPOSIT && amount <= WF_MAX_DEPOSIT_SINGLE;
+    }
+
+    function getTierName(uint8 tierId) external pure returns (string memory) {
+        if (tierId == 0) return "None";
+        if (tierId == 1) return "Bronze";
+        if (tierId == 2) return "Silver";
+        if (tierId == 3) return "Gold";
+        if (tierId == 4) return "Platinum";
+        return "Unknown";
+    }
+
+    uint256 public constant WF_SESSION_COOLDOWN = WF_SESSION_COOLDOWN_BLOCKS;
+    uint256 public constant WF_SEED = 0x1a2b3c4d5e6f7890abcdef1234567890abcdef12;
+
+    function getSessionCooldownBlocks() external pure returns (uint256) { return WF_SESSION_COOLDOWN_BLOCKS; }
+    function getAdviceCapPerSession() external pure returns (uint256) { return WF_ADVICE_CAP_PER_SESSION; }
+
+    function getAdvisorIdsForClient(address client) external view returns (uint256[] memory advisorIds) {
+        uint256[] storage pids = clientPortfolioIds[client];
+        uint256[] memory temp = new uint256[](pids.length);
+        uint256 seen;
+        for (uint256 i = 0; i < pids.length; i++) {
+            uint256 aid = wfPortfolios[pids[i]].advisorId;
+            bool found;
+            for (uint256 j = 0; j < seen; j++) {
+                if (temp[j] == aid) { found = true; break; }
+            }
