@@ -1233,3 +1233,98 @@ contract WizardFinance {
 
     function computeTotalFee(uint256 amount) external pure returns (uint256) {
         return ((amount * (WF_ADVISOR_FEE_BPS + WF_PLATFORM_FEE_BPS)) / WF_BPS);
+    }
+
+    function computeNetAfterFees(uint256 amount) external pure returns (uint256) {
+        return amount - ((amount * (WF_ADVISOR_FEE_BPS + WF_PLATFORM_FEE_BPS)) / WF_BPS);
+    }
+
+    /// @notice Batch: advisor id -> (wallet, active, totalClients, totalFeesEarned, registeredAtBlock).
+    function getAdvisorDetailsBatch(uint256[] calldata ids) external view returns (
+        address[] memory wallets,
+        bool[] memory actives,
+        uint256[] memory totalClientsArr,
+        uint256[] memory totalFeesArr,
+        uint256[] memory registeredAtBlocks
+    ) {
+        uint256 n = ids.length;
+        wallets = new address[](n);
+        actives = new bool[](n);
+        totalClientsArr = new uint256[](n);
+        totalFeesArr = new uint256[](n);
+        registeredAtBlocks = new uint256[](n);
+        for (uint256 i = 0; i < n; i++) {
+            uint256 id = ids[i];
+            if (id != 0 && id <= advisorCount) {
+                WFAdvisor storage a = wfAdvisors[id];
+                wallets[i] = a.wallet;
+                actives[i] = a.active;
+                totalClientsArr[i] = a.totalClients;
+                totalFeesArr[i] = a.totalFeesEarned;
+                registeredAtBlocks[i] = a.registeredAtBlock;
+            }
+        }
+    }
+
+    /// @notice Batch: portfolio id -> (client, advisorId, totalDeposited, totalWithdrawn, createdAtBlock, closed).
+    function getPortfolioDetailsBatch(uint256[] calldata ids) external view returns (
+        address[] memory clients,
+        uint256[] memory advisorIds,
+        uint256[] memory totalDepositedArr,
+        uint256[] memory totalWithdrawnArr,
+        uint256[] memory createdAtBlocks,
+        bool[] memory closedArr
+    ) {
+        uint256 n = ids.length;
+        clients = new address[](n);
+        advisorIds = new uint256[](n);
+        totalDepositedArr = new uint256[](n);
+        totalWithdrawnArr = new uint256[](n);
+        createdAtBlocks = new uint256[](n);
+        closedArr = new bool[](n);
+        for (uint256 i = 0; i < n; i++) {
+            uint256 id = ids[i];
+            if (id != 0 && id <= portfolioCount) {
+                WFPortfolio storage p = wfPortfolios[id];
+                clients[i] = p.client;
+                advisorIds[i] = p.advisorId;
+                totalDepositedArr[i] = p.totalDeposited;
+                totalWithdrawnArr[i] = p.totalWithdrawn;
+                createdAtBlocks[i] = p.createdAtBlock;
+                closedArr[i] = p.closed;
+            }
+        }
+    }
+
+    function getPortfolioAllocationCount(uint256 portfolioId) external view returns (uint256) {
+        return portfolioAllocations[portfolioId].length;
+    }
+
+    function getPortfolioTokenBalanceBatch(uint256 portfolioId, address[] calldata tokens) external view returns (uint256[] memory) {
+        uint256 n = tokens.length;
+        uint256[] memory out = new uint256[](n);
+        for (uint256 i = 0; i < n; i++) {
+            out[i] = portfolioTokenBalance[portfolioId][tokens[i]];
+        }
+        return out;
+    }
+
+    function getClientPortfolioCount(address client) external view returns (uint256) {
+        return clientPortfolioIds[client].length;
+    }
+
+    function getClientTierName(address client) external view returns (string memory) {
+        uint8 t = clientTier[client];
+        if (t == 0) return "None";
+        if (t == 1) return "Bronze";
+        if (t == 2) return "Silver";
+        if (t == 3) return "Gold";
+        if (t == 4) return "Platinum";
+        return "Unknown";
+    }
+
+    function tierName(uint8 tier) external pure returns (string memory) {
+        if (tier == 0) return "None";
+        if (tier == 1) return "Bronze";
+        if (tier == 2) return "Silver";
+        if (tier == 3) return "Gold";
