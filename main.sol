@@ -1423,3 +1423,98 @@ contract WizardFinance {
     }
 
     function advisorIdFor(address wallet) external view returns (uint256) {
+        return advisorIdByWallet[wallet];
+    }
+
+    function portfolioCountForClient(address client) external view returns (uint256) {
+        return clientPortfolioIds[client].length;
+    }
+
+    function allocationCount(uint256 portfolioId) external view returns (uint256) {
+        return portfolioAllocations[portfolioId].length;
+    }
+
+    function tokenBalanceInPortfolio(uint256 portfolioId, address token) external view returns (uint256) {
+        return portfolioTokenBalance[portfolioId][token];
+    }
+
+    function clientTierLevel(address client) external view returns (uint8) {
+        return clientTier[client];
+    }
+
+    function nonceFor(address client) external view returns (uint256) {
+        return clientNonce[client];
+    }
+
+    function advisorWallet(uint256 advisorId) external view returns (address) {
+        if (advisorId == 0 || advisorId > advisorCount) return address(0);
+        return wfAdvisors[advisorId].wallet;
+    }
+
+    function advisorIsActive(uint256 advisorId) external view returns (bool) {
+        if (advisorId == 0 || advisorId > advisorCount) return false;
+        return wfAdvisors[advisorId].active;
+    }
+
+    function advisorClientCount(uint256 advisorId) external view returns (uint256) {
+        if (advisorId == 0 || advisorId > advisorCount) return 0;
+        return wfAdvisors[advisorId].totalClients;
+    }
+
+    function advisorFeesEarned(uint256 advisorId) external view returns (uint256) {
+        if (advisorId == 0 || advisorId > advisorCount) return 0;
+        return wfAdvisors[advisorId].totalFeesEarned;
+    }
+
+    function advisorRegisteredBlock(uint256 advisorId) external view returns (uint256) {
+        if (advisorId == 0 || advisorId > advisorCount) return 0;
+        return wfAdvisors[advisorId].registeredAtBlock;
+    }
+
+    function portfolioClient(uint256 portfolioId) external view returns (address) {
+        if (portfolioId == 0 || portfolioId > portfolioCount) return address(0);
+        return wfPortfolios[portfolioId].client;
+    }
+
+    function portfolioAdvisorId(uint256 portfolioId) external view returns (uint256) {
+        if (portfolioId == 0 || portfolioId > portfolioCount) return 0;
+        return wfPortfolios[portfolioId].advisorId;
+    }
+
+    function portfolioTotalDeposited(uint256 portfolioId) external view returns (uint256) {
+        if (portfolioId == 0 || portfolioId > portfolioCount) return 0;
+        return wfPortfolios[portfolioId].totalDeposited;
+    }
+
+    function portfolioTotalWithdrawn(uint256 portfolioId) external view returns (uint256) {
+        if (portfolioId == 0 || portfolioId > portfolioCount) return 0;
+        return wfPortfolios[portfolioId].totalWithdrawn;
+    }
+
+    function portfolioCreatedBlock(uint256 portfolioId) external view returns (uint256) {
+        if (portfolioId == 0 || portfolioId > portfolioCount) return 0;
+        return wfPortfolios[portfolioId].createdAtBlock;
+    }
+
+    function portfolioClosed(uint256 portfolioId) external view returns (bool) {
+        if (portfolioId == 0 || portfolioId > portfolioCount) return true;
+        return wfPortfolios[portfolioId].closed;
+    }
+
+    function netDepositsForPortfolio(uint256 portfolioId) external view returns (uint256) {
+        if (portfolioId == 0 || portfolioId > portfolioCount) return 0;
+        WFPortfolio storage p = wfPortfolios[portfolioId];
+        return p.totalDeposited > p.totalWithdrawn ? p.totalDeposited - p.totalWithdrawn : 0;
+    }
+
+    function netDepositsForClient(address client) external view returns (uint256) {
+        uint256 dep = 0;
+        uint256 with_ = 0;
+        uint256[] memory pids = clientPortfolioIds[client];
+        for (uint256 i = 0; i < pids.length; i++) {
+            WFPortfolio storage p = wfPortfolios[pids[i]];
+            dep += p.totalDeposited;
+            with_ += p.totalWithdrawn;
+        }
+        return dep > with_ ? dep - with_ : 0;
+    }
