@@ -663,3 +663,98 @@ contract WizardFinance {
         );
     }
 
+    uint256 public constant WF_VERSION = 1;
+    uint256 public constant WF_MAX_ALLOCATIONS_PER_PORTFOLIO = 500;
+
+    function getMinDepositConstant() external pure returns (uint256) { return WF_MIN_DEPOSIT; }
+    function getMaxDepositSingleConstant() external pure returns (uint256) { return WF_MAX_DEPOSIT_SINGLE; }
+    function getAdvisorFeeBpsConstant() external pure returns (uint256) { return WF_ADVISOR_FEE_BPS; }
+    function getPlatformFeeBpsConstant() external pure returns (uint256) { return WF_PLATFORM_FEE_BPS; }
+    function getBpsConstant() external pure returns (uint256) { return WF_BPS; }
+    function getMaxAdvisorsConstant() external pure returns (uint256) { return WF_MAX_ADVISORS; }
+    function getMaxPortfoliosPerClientConstant() external pure returns (uint256) { return WF_MAX_PORTFOLIOS_PER_CLIENT; }
+
+    function getTreasuryAddress() external view returns (address) { return wfTreasury; }
+    function getRegistryKeeperAddress() external view returns (address) { return wfRegistryKeeper; }
+    function getFeeVaultAddress() external view returns (address) { return wfFeeVault; }
+
+    function isOwner(address account) external view returns (bool) { return account == owner; }
+    function isTreasury(address account) external view returns (bool) { return account == wfTreasury; }
+    function isRegistryKeeper(address account) external view returns (bool) { return account == wfRegistryKeeper; }
+    function isFeeVault(address account) external view returns (bool) { return account == wfFeeVault; }
+
+    function getActiveAdvisorCount() external view returns (uint256 count) {
+        for (uint256 i = 1; i <= advisorCount; i++) {
+            if (wfAdvisors[i].active) count++;
+        }
+    }
+
+    function getOpenPortfolioCount() external view returns (uint256 count) {
+        for (uint256 i = 1; i <= portfolioCount; i++) {
+            if (!wfPortfolios[i].closed) count++;
+        }
+    }
+
+    function getClosedPortfolioCount() external view returns (uint256 count) {
+        for (uint256 i = 1; i <= portfolioCount; i++) {
+            if (wfPortfolios[i].closed) count++;
+        }
+    }
+
+    function advisorExists(uint256 advisorId) external view returns (bool) {
+        return advisorId != 0 && advisorId <= advisorCount;
+    }
+
+    function portfolioExists(uint256 portfolioId) external view returns (bool) {
+        return portfolioId != 0 && portfolioId <= portfolioCount;
+    }
+
+    function computeAdvisorFee(uint256 amount) external pure returns (uint256) {
+        return (amount * WF_ADVISOR_FEE_BPS) / WF_BPS;
+    }
+
+    function computePlatformFee(uint256 amount) external pure returns (uint256) {
+        return (amount * WF_PLATFORM_FEE_BPS) / WF_BPS;
+    }
+
+    function computeTotalFee(uint256 amount) external pure returns (uint256) {
+        return (amount * (WF_ADVISOR_FEE_BPS + WF_PLATFORM_FEE_BPS)) / WF_BPS;
+    }
+
+    function computeNetAfterFees(uint256 amount) external pure returns (uint256) {
+        uint256 totalFee = (amount * (WF_ADVISOR_FEE_BPS + WF_PLATFORM_FEE_BPS)) / WF_BPS;
+        return amount - totalFee;
+    }
+
+    function getClientPortfolioCount(address client) external view returns (uint256) {
+        return clientPortfolioIds[client].length;
+    }
+
+    function getClientPortfolioIdAt(address client, uint256 index) external view returns (uint256) {
+        return clientPortfolioIds[client][index];
+    }
+
+    function getTotalNetDeposits() external view returns (uint256) {
+        return totalDeposits > totalWithdrawn ? totalDeposits - totalWithdrawn : 0;
+    }
+
+    function getDomainInfo() external view returns (bytes32 domainSep_, uint256 genesis_) {
+        return (wfDomainSeparator, wfGenesisBlock);
+    }
+
+    function getFullGlobalStats() external view returns (
+        uint256 totalDeposits_,
+        uint256 totalWithdrawn_,
+        uint256 totalFeesCollected_,
+        uint256 advisorCount_,
+        uint256 portfolioCount_,
+        bool paused_,
+        address owner_,
+        uint256 chainId_
+    ) {
+        return (
+            totalDeposits,
+            totalWithdrawn,
+            totalFeesCollected,
+            advisorCount,
+            portfolioCount,
