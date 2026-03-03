@@ -188,3 +188,98 @@ contract WizardFinance {
         if (p.closed) revert WF_PortfolioClosed();
         if (p.client != msg.sender) revert WF_NotPortfolioClient();
         if (amount < WF_MIN_DEPOSIT) revert WF_DepositTooLow();
+        if (amount > WF_MAX_DEPOSIT_SINGLE) revert WF_DepositTooHigh();
+
+        uint256 feeWei = (amount * WF_ADVISOR_FEE_BPS) / WF_BPS;
+        uint256 platformWei = (amount * WF_PLATFORM_FEE_BPS) / WF_BPS;
+        uint256 net = amount - feeWei - platformWei;
+        totalFeesCollected += feeWei + platformWei;
+
+        if (token == address(0)) {
+            if (msg.value != amount) revert WF_TransferFailed();
+            if (feeWei > 0) _sendEth(wfAdvisors[p.advisorId].wallet, feeWei);
+            if (platformWei > 0) _sendEth(wfFeeVault, platformWei);
+        } else {
+            _pullToken(token, msg.sender, amount);
+            if (feeWei > 0) _pushToken(token, wfAdvisors[p.advisorId].wallet, feeWei);
+            if (platformWei > 0) _pushToken(token, wfFeeVault, platformWei);
+        }
+
+        p.totalDeposited += amount;
+        totalDeposits += amount;
+        portfolioTokenBalance[portfolioId][token] += net;
+        portfolioAllocations[portfolioId].push(WFAllocation({ token: token, amount: net, atBlock: block.number }));
+        _updateClientTier(msg.sender);
+        wfAdvisors[p.advisorId].totalFeesEarned += feeWei;
+        emit WF_Deposit(portfolioId, token, amount, feeWei + platformWei);
+        emit WF_AllocationRecorded(portfolioId, token, net);
+    }
+
+    function withdraw(uint256 portfolioId, address token, uint256 amount) external nonReentrant {
+        if (portfolioId == 0 || portfolioId > portfolioCount) revert WF_InvalidPortfolioId();
+        WFPortfolio storage p = wfPortfolios[portfolioId];
+        if (p.closed) revert WF_PortfolioClosed();
+        if (p.client != msg.sender) revert WF_NotPortfolioClient();
+        if (portfolioTokenBalance[portfolioId][token] < amount) revert WF_InsufficientBalance();
+
+        p.totalWithdrawn += amount;
+        totalWithdrawn += amount;
+        portfolioTokenBalance[portfolioId][token] -= amount;
+
+        if (token == address(0)) {
+            _sendEth(msg.sender, amount);
+        } else {
+            _pushToken(token, msg.sender, amount);
+        }
+        emit WF_Withdraw(portfolioId, token, amount);
+    }
+
+    function closePortfolio(uint256 portfolioId) external {
+        if (portfolioId == 0 || portfolioId > portfolioCount) revert WF_InvalidPortfolioId();
+        WFPortfolio storage p = wfPortfolios[portfolioId];
+        if (p.closed) revert WF_PortfolioClosed();
+        if (msg.sender != owner && msg.sender != p.client && msg.sender != wfAdvisors[p.advisorId].wallet) revert WF_Unauthorized();
+        p.closed = true;
+        emit WF_PortfolioClosed(portfolioId);
+    }
+
+    function setPaused(bool p) external onlyOwner {
+        wfPaused = p;
+        emit WF_PauseToggled(p);
+    }
+
+    function transferOwnership(address newOwner) external onlyOwner {
+        if (newOwner == address(0)) revert WF_ZeroAddress();
+        emit WF_OwnershipTransferred(owner, newOwner);
+        owner = newOwner;
+    }
+
+    function getPortfolio(uint256 portfolioId) external view returns (
+        address client_,
+        uint256 advisorId_,
+        uint256 totalDeposited_,
+        uint256 totalWithdrawn_,
+        uint256 createdAtBlock_,
+        bool closed_
+    ) {
+        if (portfolioId == 0 || portfolioId > portfolioCount) revert WF_InvalidPortfolioId();
+        WFPortfolio storage p = wfPortfolios[portfolioId];
+        return (p.client, p.advisorId, p.totalDeposited, p.totalWithdrawn, p.createdAtBlock, p.closed);
+    }
+
+    function getAdvisor(uint256 advisorId) external view returns (
+        address wallet_,
+        bool active_,
+        uint256 totalClients_,
+        uint256 totalFeesEarned_,
+        uint256 registeredAtBlock_
+    ) {
+        if (advisorId == 0 || advisorId > advisorCount) revert WF_InvalidAdvisorId();
+        WFAdvisor storage a = wfAdvisors[advisorId];
+        return (a.wallet, a.active, a.totalClients, a.totalFeesEarned, a.registeredAtBlock);
+    }
+
+    function getPortfolioBalance(uint256 portfolioId, address token) external view returns (uint256) {
+        return portfolioTokenBalance[portfolioId][token];
+    }
+
