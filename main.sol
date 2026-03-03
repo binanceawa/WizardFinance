@@ -1518,3 +1518,98 @@ contract WizardFinance {
         }
         return dep > with_ ? dep - with_ : 0;
     }
+
+    function totalDepositedForClient(address client) external view returns (uint256) {
+        uint256[] memory pids = clientPortfolioIds[client];
+        uint256 sum = 0;
+        for (uint256 i = 0; i < pids.length; i++) {
+            sum += wfPortfolios[pids[i]].totalDeposited;
+        }
+        return sum;
+    }
+
+    function totalWithdrawnForClient(address client) external view returns (uint256) {
+        uint256[] memory pids = clientPortfolioIds[client];
+        uint256 sum = 0;
+        for (uint256 i = 0; i < pids.length; i++) {
+            sum += wfPortfolios[pids[i]].totalWithdrawn;
+        }
+        return sum;
+    }
+
+    function getAdvisorIdsPaginated(uint256 offset, uint256 limit) external view returns (uint256[] memory) {
+        if (limit == 0) return new uint256[](0);
+        if (offset >= advisorCount) return new uint256[](0);
+        uint256 end = offset + limit;
+        if (end > advisorCount) end = advisorCount;
+        uint256 n = end - offset;
+        uint256[] memory out = new uint256[](n);
+        for (uint256 i = 0; i < n; i++) {
+            out[i] = offset + i + 1;
+        }
+        return out;
+    }
+
+    function getPortfolioIdsPaginated(uint256 offset, uint256 limit) external view returns (uint256[] memory) {
+        if (limit == 0) return new uint256[](0);
+        if (offset >= portfolioCount) return new uint256[](0);
+        uint256 end = offset + limit;
+        if (end > portfolioCount) end = portfolioCount;
+        uint256 n = end - offset;
+        uint256[] memory out = new uint256[](n);
+        for (uint256 i = 0; i < n; i++) {
+            out[i] = offset + i + 1;
+        }
+        return out;
+    }
+
+    function getAdvisorIdsRange(uint256 fromId, uint256 toId) external view returns (uint256[] memory) {
+        if (fromId > toId || fromId == 0) return new uint256[](0);
+        if (toId > advisorCount) toId = advisorCount;
+        uint256 n = toId - fromId + 1;
+        uint256[] memory out = new uint256[](n);
+        for (uint256 i = 0; i < n; i++) {
+            out[i] = fromId + i;
+        }
+        return out;
+    }
+
+    function getPortfolioIdsRange(uint256 fromId, uint256 toId) external view returns (uint256[] memory) {
+        if (fromId > toId || fromId == 0) return new uint256[](0);
+        if (toId > portfolioCount) toId = portfolioCount;
+        uint256 n = toId - fromId + 1;
+        uint256[] memory out = new uint256[](n);
+        for (uint256 i = 0; i < n; i++) {
+            out[i] = fromId + i;
+        }
+        return out;
+    }
+
+    function sliceAllocations(uint256 portfolioId, uint256 start, uint256 len) external view returns (
+        address[] memory tokens,
+        uint256[] memory amounts,
+        uint256[] memory blocks_
+    ) {
+        WFAllocation[] storage arr = portfolioAllocations[portfolioId];
+        uint256 arrLen = arr.length;
+        if (start >= arrLen || len == 0) {
+            return (new address[](0), new uint256[](0), new uint256[](0));
+        }
+        uint256 end = start + len;
+        if (end > arrLen) end = arrLen;
+        uint256 n = end - start;
+        tokens = new address[](n);
+        amounts = new uint256[](n);
+        blocks_ = new uint256[](n);
+        for (uint256 i = 0; i < n; i++) {
+            WFAllocation storage a = arr[start + i];
+            tokens[i] = a.token;
+            amounts[i] = a.amount;
+            blocks_[i] = a.atBlock;
+        }
+    }
+
+    function getAllocationByIndex(uint256 portfolioId, uint256 index) external view returns (address token_, uint256 amount_, uint256 atBlock_) {
+        WFAllocation[] storage arr = portfolioAllocations[portfolioId];
+        if (index >= arr.length) return (address(0), 0, 0);
+        WFAllocation storage a = arr[index];
