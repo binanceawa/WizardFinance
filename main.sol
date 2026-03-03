@@ -1138,3 +1138,98 @@ contract WizardFinance {
     function getAdvisorRegisteredBlock(uint256 id) external view returns (uint256) {
         if (id == 0 || id > advisorCount) return 0;
         return wfAdvisors[id].registeredAtBlock;
+    }
+
+    function getPortfolioClientAddr(uint256 id) external view returns (address) {
+        if (id == 0 || id > portfolioCount) return address(0);
+        return wfPortfolios[id].client;
+    }
+
+    function getPortfolioAdvisor(uint256 id) external view returns (uint256) {
+        if (id == 0 || id > portfolioCount) return 0;
+        return wfPortfolios[id].advisorId;
+    }
+
+    function getPortfolioDeposited(uint256 id) external view returns (uint256) {
+        if (id == 0 || id > portfolioCount) return 0;
+        return wfPortfolios[id].totalDeposited;
+    }
+
+    function getPortfolioWithdrawn(uint256 id) external view returns (uint256) {
+        if (id == 0 || id > portfolioCount) return 0;
+        return wfPortfolios[id].totalWithdrawn;
+    }
+
+    function getPortfolioCreatedBlock(uint256 id) external view returns (uint256) {
+        if (id == 0 || id > portfolioCount) return 0;
+        return wfPortfolios[id].createdAtBlock;
+    }
+
+    function getPortfolioIsClosed(uint256 id) external view returns (bool) {
+        if (id == 0 || id > portfolioCount) return true;
+        return wfPortfolios[id].closed;
+    }
+
+    function getBalance(uint256 portfolioId, address token) external view returns (uint256) {
+        return portfolioTokenBalance[portfolioId][token];
+    }
+
+    function getTier(address client) external view returns (uint8) {
+        return clientTier[client];
+    }
+
+    function getNonce(address client) external view returns (uint256) {
+        return clientNonce[client];
+    }
+
+    function getTypehashAdvisorRegister() external pure returns (bytes32) { return WF_ADVISOR_REGISTER_TYPEHASH; }
+    function getTypehashAllocate() external pure returns (bytes32) { return WF_ALLOCATE_TYPEHASH; }
+    function getTypehashPortfolioCreate() external pure returns (bytes32) { return WF_PORTFOLIO_CREATE_TYPEHASH; }
+
+    function getContractBalance() external view returns (uint256) {
+        return address(this).balance;
+    }
+
+    function getTokenBalance(address token) external view returns (uint256) {
+        return IERC20Min(token).balanceOf(address(this));
+    }
+
+    function supportsInterface(bytes4) external pure returns (bool) {
+        return false;
+    }
+
+    /// @notice Returns tier thresholds in wei for display purposes.
+    function getTierThresholds() external pure returns (
+        uint256 bronzeMin,
+        uint256 silverMin,
+        uint256 goldMin,
+        uint256 platinumMin
+    ) {
+        return (WF_TIER_BRONZE_MIN, WF_TIER_SILVER_MIN, WF_TIER_GOLD_MIN, WF_TIER_PLATINUM_MIN);
+    }
+
+    /// @notice Returns fee parameters in basis points.
+    function getFeeParams() external pure returns (uint256 advisorBps, uint256 platformBps, uint256 bpsDenom) {
+        return (WF_ADVISOR_FEE_BPS, WF_PLATFORM_FEE_BPS, WF_BPS);
+    }
+
+    /// @notice Returns deposit limits in wei.
+    function getDepositLimits() external pure returns (uint256 minDeposit, uint256 maxDepositSingle) {
+        return (WF_MIN_DEPOSIT, WF_MAX_DEPOSIT_SINGLE);
+    }
+
+    /// @notice Returns session/cooldown constants.
+    function getSessionParams() external pure returns (uint256 cooldownBlocks, uint256 adviceCapPerSession) {
+        return (WF_SESSION_COOLDOWN_BLOCKS, WF_ADVICE_CAP_PER_SESSION);
+    }
+
+    function computeAdvisorFee(uint256 amount) external pure returns (uint256) {
+        return (amount * WF_ADVISOR_FEE_BPS) / WF_BPS;
+    }
+
+    function computePlatformFee(uint256 amount) external pure returns (uint256) {
+        return (amount * WF_PLATFORM_FEE_BPS) / WF_BPS;
+    }
+
+    function computeTotalFee(uint256 amount) external pure returns (uint256) {
+        return ((amount * (WF_ADVISOR_FEE_BPS + WF_PLATFORM_FEE_BPS)) / WF_BPS);
