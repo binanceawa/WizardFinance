@@ -1613,3 +1613,98 @@ contract WizardFinance {
         WFAllocation[] storage arr = portfolioAllocations[portfolioId];
         if (index >= arr.length) return (address(0), 0, 0);
         WFAllocation storage a = arr[index];
+        return (a.token, a.amount, a.atBlock);
+    }
+
+    function getConstantsPack1() external pure returns (
+        uint256 bps,
+        uint256 maxAdv,
+        uint256 maxPortPerClient,
+        uint256 advFeeBps,
+        uint256 platFeeBps
+    ) {
+        return (WF_BPS, WF_MAX_ADVISORS, WF_MAX_PORTFOLIOS_PER_CLIENT, WF_ADVISOR_FEE_BPS, WF_PLATFORM_FEE_BPS);
+    }
+
+    function getConstantsPack2() external pure returns (
+        uint256 minDep,
+        uint256 maxDepSingle,
+        uint256 bronzeMin,
+        uint256 silverMin,
+        uint256 goldMin,
+        uint256 platinumMin
+    ) {
+        return (WF_MIN_DEPOSIT, WF_MAX_DEPOSIT_SINGLE, WF_TIER_BRONZE_MIN, WF_TIER_SILVER_MIN, WF_TIER_GOLD_MIN, WF_TIER_PLATINUM_MIN);
+    }
+
+    function getConstantsPack3() external pure returns (
+        uint256 cooldownBlocks,
+        uint256 adviceCap
+    ) {
+        return (WF_SESSION_COOLDOWN_BLOCKS, WF_ADVICE_CAP_PER_SESSION);
+    }
+
+    /// @notice Checks whether a given advisor can accept new clients (under cap and active).
+    function advisorCanAcceptClients(uint256 advisorId) external view returns (bool) {
+        if (advisorId == 0 || advisorId > advisorCount) return false;
+        WFAdvisor storage a = wfAdvisors[advisorId];
+        return a.active;
+    }
+
+    /// @notice Returns the number of portfolios managed by an advisor (derived from storage).
+    function getAdvisorPortfolioCount(uint256 advisorId) external view returns (uint256 count_) {
+        if (advisorId == 0 || advisorId > advisorCount) return 0;
+        count_ = 0;
+        for (uint256 i = 1; i <= portfolioCount; i++) {
+            if (wfPortfolios[i].advisorId == advisorId && !wfPortfolios[i].closed) count_++;
+        }
+    }
+
+    /// @notice Returns portfolio IDs managed by a given advisor (bounded scan).
+    function getPortfolioIdsByAdvisor(uint256 advisorId, uint256 maxReturn) external view returns (uint256[] memory) {
+        if (advisorId == 0 || advisorId > advisorCount || maxReturn == 0) return new uint256[](0);
+        uint256[] memory temp = new uint256[](maxReturn);
+        uint256 n = 0;
+        for (uint256 i = 1; i <= portfolioCount && n < maxReturn; i++) {
+            if (wfPortfolios[i].advisorId == advisorId && !wfPortfolios[i].closed) {
+                temp[n] = i;
+                n++;
+            }
+        }
+        uint256[] memory out = new uint256[](n);
+        for (uint256 j = 0; j < n; j++) out[j] = temp[j];
+        return out;
+    }
+
+    function getFirstAllocation(uint256 portfolioId) external view returns (address token_, uint256 amount_, uint256 atBlock_) {
+        WFAllocation[] storage arr = portfolioAllocations[portfolioId];
+        if (arr.length == 0) return (address(0), 0, 0);
+        WFAllocation storage a = arr[0];
+        return (a.token, a.amount, a.atBlock);
+    }
+
+    function getLastAllocation(uint256 portfolioId) external view returns (address token_, uint256 amount_, uint256 atBlock_) {
+        WFAllocation[] storage arr = portfolioAllocations[portfolioId];
+        if (arr.length == 0) return (address(0), 0, 0);
+        WFAllocation storage a = arr[arr.length - 1];
+        return (a.token, a.amount, a.atBlock);
+    }
+
+    function sumAllocationAmounts(uint256 portfolioId) external view returns (uint256 total_) {
+        WFAllocation[] storage arr = portfolioAllocations[portfolioId];
+        total_ = 0;
+        for (uint256 i = 0; i < arr.length; i++) {
+            total_ += arr[i].amount;
+        }
+    }
+
+    function sumAllocationAmountsForToken(uint256 portfolioId, address token) external view returns (uint256 total_) {
+        WFAllocation[] storage arr = portfolioAllocations[portfolioId];
+        total_ = 0;
+        for (uint256 i = 0; i < arr.length; i++) {
+            if (arr[i].token == token) total_ += arr[i].amount;
+        }
+    }
+
+    function getAdvisorIdsList() external view returns (uint256[] memory) {
+        if (advisorCount == 0) return new uint256[](0);
