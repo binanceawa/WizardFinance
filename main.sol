@@ -1708,3 +1708,98 @@ contract WizardFinance {
 
     function getAdvisorIdsList() external view returns (uint256[] memory) {
         if (advisorCount == 0) return new uint256[](0);
+        uint256[] memory out = new uint256[](advisorCount);
+        for (uint256 i = 0; i < advisorCount; i++) {
+            out[i] = i + 1;
+        }
+        return out;
+    }
+
+    function getPortfolioIdsList() external view returns (uint256[] memory) {
+        if (portfolioCount == 0) return new uint256[](0);
+        uint256[] memory out = new uint256[](portfolioCount);
+        for (uint256 i = 0; i < portfolioCount; i++) {
+            out[i] = i + 1;
+        }
+        return out;
+    }
+
+    function getPortfolioSummary(uint256 portfolioId) external view returns (
+        address client_,
+        uint256 advisorId_,
+        uint256 deposited_,
+        uint256 withdrawn_,
+        uint256 net_,
+        uint256 createdAt_,
+        bool closed_
+    ) {
+        if (portfolioId == 0 || portfolioId > portfolioCount) {
+            return (address(0), 0, 0, 0, 0, 0, true);
+        }
+        WFPortfolio storage p = wfPortfolios[portfolioId];
+        uint256 net = p.totalDeposited > p.totalWithdrawn ? p.totalDeposited - p.totalWithdrawn : 0;
+        return (p.client, p.advisorId, p.totalDeposited, p.totalWithdrawn, net, p.createdAtBlock, p.closed);
+    }
+
+    function getAdvisorSummary(uint256 advisorId) external view returns (
+        address wallet_,
+        bool active_,
+        uint256 totalClients_,
+        uint256 totalFeesEarned_,
+        uint256 registeredAtBlock_
+    ) {
+        if (advisorId == 0 || advisorId > advisorCount) {
+            return (address(0), false, 0, 0, 0);
+        }
+        WFAdvisor storage a = wfAdvisors[advisorId];
+        return (a.wallet, a.active, a.totalClients, a.totalFeesEarned, a.registeredAtBlock);
+    }
+
+    function getGlobalSummary() external view returns (
+        uint256 advisors_,
+        uint256 portfolios_,
+        uint256 totalDeposits_,
+        uint256 totalWithdrawn_,
+        uint256 totalFees_,
+        uint256 netDeposits_
+    ) {
+        uint256 net = totalDeposits > totalWithdrawn ? totalDeposits - totalWithdrawn : 0;
+        return (advisorCount, portfolioCount, totalDeposits, totalWithdrawn, totalFeesCollected, net);
+    }
+
+    function computeTierFromNetDeposits(uint256 netDepositsWei) external pure returns (uint8) {
+        if (netDepositsWei >= WF_TIER_PLATINUM_MIN) return 4;
+        if (netDepositsWei >= WF_TIER_GOLD_MIN) return 3;
+        if (netDepositsWei >= WF_TIER_SILVER_MIN) return 2;
+        if (netDepositsWei >= WF_TIER_BRONZE_MIN) return 1;
+        return 0;
+    }
+
+    function getTierMinForLevel(uint8 level) external pure returns (uint256) {
+        if (level == 1) return WF_TIER_BRONZE_MIN;
+        if (level == 2) return WF_TIER_SILVER_MIN;
+        if (level == 3) return WF_TIER_GOLD_MIN;
+        if (level == 4) return WF_TIER_PLATINUM_MIN;
+        return 0;
+    }
+
+    function isValidAdvisorId(uint256 id) external view returns (bool) {
+        return id != 0 && id <= advisorCount;
+    }
+
+    function isValidPortfolioId(uint256 id) external view returns (bool) {
+        return id != 0 && id <= portfolioCount;
+    }
+
+    function isClientPortfolio(uint256 portfolioId, address client) external view returns (bool) {
+        if (portfolioId == 0 || portfolioId > portfolioCount) return false;
+        return wfPortfolios[portfolioId].client == client;
+    }
+
+    function isAdvisorPortfolio(uint256 portfolioId, uint256 advisorId) external view returns (bool) {
+        if (portfolioId == 0 || portfolioId > portfolioCount) return false;
+        return wfPortfolios[portfolioId].advisorId == advisorId;
+    }
+
+    function canWithdraw(uint256 portfolioId, address token, uint256 amount) external view returns (bool) {
+        if (portfolioId == 0 || portfolioId > portfolioCount) return false;
