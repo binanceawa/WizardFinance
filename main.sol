@@ -1898,3 +1898,90 @@ contract WizardFinance {
         address feeVault_,
         uint256 genesis_
     ) {
+        return (wfTreasury, wfRegistryKeeper, wfFeeVault, wfGenesisBlock);
+    }
+
+    function getStateFlags() external view returns (bool paused_, address owner_) {
+        return (wfPaused, owner);
+    }
+
+    function getAggregateCounts() external view returns (
+        uint256 advisors_,
+        uint256 portfolios_,
+        uint256 totalDep_,
+        uint256 totalWith_,
+        uint256 fees_
+    ) {
+        return (advisorCount, portfolioCount, totalDeposits, totalWithdrawn, totalFeesCollected);
+    }
+
+    function wfConfigTreasury() external view returns (address) { return wfTreasury; }
+    function wfConfigRegistry() external view returns (address) { return wfRegistryKeeper; }
+    function wfConfigFeeVault() external view returns (address) { return wfFeeVault; }
+    function wfConfigGenesis() external view returns (uint256) { return wfGenesisBlock; }
+    function wfConfigDomainSeparator() external view returns (bytes32) { return wfDomainSeparator; }
+    function statePaused() external view returns (bool) { return wfPaused; }
+    function stateOwner() external view returns (address) { return owner; }
+    function stateAdvisorCount() external view returns (uint256) { return advisorCount; }
+    function statePortfolioCount() external view returns (uint256) { return portfolioCount; }
+    function stateTotalDeposits() external view returns (uint256) { return totalDeposits; }
+    function stateTotalWithdrawn() external view returns (uint256) { return totalWithdrawn; }
+    function stateTotalFees() external view returns (uint256) { return totalFeesCollected; }
+    function constBps() external pure returns (uint256) { return WF_BPS; }
+    function constMaxAdvisors() external pure returns (uint256) { return WF_MAX_ADVISORS; }
+    function constMaxPortfoliosPerClient() external pure returns (uint256) { return WF_MAX_PORTFOLIOS_PER_CLIENT; }
+    function constAdvisorFeeBps() external pure returns (uint256) { return WF_ADVISOR_FEE_BPS; }
+    function constPlatformFeeBps() external pure returns (uint256) { return WF_PLATFORM_FEE_BPS; }
+    function constMinDeposit() external pure returns (uint256) { return WF_MIN_DEPOSIT; }
+    function constMaxDepositSingle() external pure returns (uint256) { return WF_MAX_DEPOSIT_SINGLE; }
+    function constTierBronzeMin() external pure returns (uint256) { return WF_TIER_BRONZE_MIN; }
+    function constTierSilverMin() external pure returns (uint256) { return WF_TIER_SILVER_MIN; }
+    function constTierGoldMin() external pure returns (uint256) { return WF_TIER_GOLD_MIN; }
+    function constTierPlatinumMin() external pure returns (uint256) { return WF_TIER_PLATINUM_MIN; }
+    function constSessionCooldownBlocks() external pure returns (uint256) { return WF_SESSION_COOLDOWN_BLOCKS; }
+    function constAdviceCapPerSession() external pure returns (uint256) { return WF_ADVICE_CAP_PER_SESSION; }
+
+    function viewTreasury() external view returns (address) { return wfTreasury; }
+    function viewRegistryKeeper() external view returns (address) { return wfRegistryKeeper; }
+    function viewFeeVault() external view returns (address) { return wfFeeVault; }
+    function viewGenesisBlock() external view returns (uint256) { return wfGenesisBlock; }
+    function viewOwner() external view returns (address) { return owner; }
+    function viewPaused() external view returns (bool) { return wfPaused; }
+    function viewAdvisorCount() external view returns (uint256) { return advisorCount; }
+    function viewPortfolioCount() external view returns (uint256) { return portfolioCount; }
+    function viewTotalDeposits() external view returns (uint256) { return totalDeposits; }
+    function viewTotalWithdrawn() external view returns (uint256) { return totalWithdrawn; }
+    function viewTotalFees() external view returns (uint256) { return totalFeesCollected; }
+    function pureBps() external pure returns (uint256) { return WF_BPS; }
+    function pureMaxAdvisors() external pure returns (uint256) { return WF_MAX_ADVISORS; }
+    function pureAdvisorFeeBps() external pure returns (uint256) { return WF_ADVISOR_FEE_BPS; }
+    function purePlatformFeeBps() external pure returns (uint256) { return WF_PLATFORM_FEE_BPS; }
+    function pureMinDeposit() external pure returns (uint256) { return WF_MIN_DEPOSIT; }
+    function pureMaxDepositSingle() external pure returns (uint256) { return WF_MAX_DEPOSIT_SINGLE; }
+    function pureTierBronze() external pure returns (uint256) { return WF_TIER_BRONZE_MIN; }
+    function pureTierSilver() external pure returns (uint256) { return WF_TIER_SILVER_MIN; }
+    function pureTierGold() external pure returns (uint256) { return WF_TIER_GOLD_MIN; }
+    function pureTierPlatinum() external pure returns (uint256) { return WF_TIER_PLATINUM_MIN; }
+    function pureCooldownBlocks() external pure returns (uint256) { return WF_SESSION_COOLDOWN_BLOCKS; }
+    function pureAdviceCap() external pure returns (uint256) { return WF_ADVICE_CAP_PER_SESSION; }
+    function pureMaxPortfoliosPerClient() external pure returns (uint256) { return WF_MAX_PORTFOLIOS_PER_CLIENT; }
+    function cfgTreasury() external view returns (address) { return wfTreasury; }
+    function cfgRegistry() external view returns (address) { return wfRegistryKeeper; }
+    function cfgFeeVault() external view returns (address) { return wfFeeVault; }
+    function cfgGenesis() external view returns (uint256) { return wfGenesisBlock; }
+    function cfgDomainSeparator() external view returns (bytes32) { return wfDomainSeparator; }
+    function statsAdvisors() external view returns (uint256) { return advisorCount; }
+    function statsPortfolios() external view returns (uint256) { return portfolioCount; }
+    function statsDeposits() external view returns (uint256) { return totalDeposits; }
+    function statsWithdrawn() external view returns (uint256) { return totalWithdrawn; }
+    function statsFees() external view returns (uint256) { return totalFeesCollected; }
+    function netDepositsGlobal() external view returns (uint256) { return totalDeposits > totalWithdrawn ? totalDeposits - totalWithdrawn : 0; }
+
+    receive() external payable {}
+}
+
+interface IERC20Min {
+    function transfer(address to, uint256 amount) external returns (bool);
+    function transferFrom(address from, address to, uint256 amount) external returns (bool);
+    function balanceOf(address account) external view returns (uint256);
+}
