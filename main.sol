@@ -1803,3 +1803,98 @@ contract WizardFinance {
 
     function canWithdraw(uint256 portfolioId, address token, uint256 amount) external view returns (bool) {
         if (portfolioId == 0 || portfolioId > portfolioCount) return false;
+        if (wfPortfolios[portfolioId].closed) return false;
+        return portfolioTokenBalance[portfolioId][token] >= amount;
+    }
+
+    function getWithdrawableAmount(uint256 portfolioId, address token) external view returns (uint256) {
+        return portfolioTokenBalance[portfolioId][token];
+    }
+
+    function getMultipleBalances(uint256 portfolioId, address[] calldata tokens) external view returns (uint256[] memory) {
+        uint256 n = tokens.length;
+        uint256[] memory out = new uint256[](n);
+        for (uint256 i = 0; i < n; i++) {
+            out[i] = portfolioTokenBalance[portfolioId][tokens[i]];
+        }
+        return out;
+    }
+
+    function getFeeAmountsForDeposit(uint256 amountWei) external pure returns (
+        uint256 toAdvisor,
+        uint256 toPlatform,
+        uint256 toClient
+    ) {
+        toAdvisor = (amountWei * WF_ADVISOR_FEE_BPS) / WF_BPS;
+        toPlatform = (amountWei * WF_PLATFORM_FEE_BPS) / WF_BPS;
+        toClient = amountWei - toAdvisor - toPlatform;
+    }
+
+    function getAdvisorFeeForAmount(uint256 amountWei) external pure returns (uint256) {
+        return (amountWei * WF_ADVISOR_FEE_BPS) / WF_BPS;
+    }
+
+    function getPlatformFeeForAmount(uint256 amountWei) external pure returns (uint256) {
+        return (amountWei * WF_PLATFORM_FEE_BPS) / WF_BPS;
+    }
+
+    function getClientAmountAfterFees(uint256 amountWei) external pure returns (uint256) {
+        uint256 totalFee = (amountWei * (WF_ADVISOR_FEE_BPS + WF_PLATFORM_FEE_BPS)) / WF_BPS;
+        return amountWei - totalFee;
+    }
+
+    function getTotalFeeBps() external pure returns (uint256) {
+        return WF_ADVISOR_FEE_BPS + WF_PLATFORM_FEE_BPS;
+    }
+
+    function getEffectiveFeePercent(uint256 amountWei) external pure returns (uint256) {
+        uint256 totalFee = (amountWei * (WF_ADVISOR_FEE_BPS + WF_PLATFORM_FEE_BPS)) / WF_BPS;
+        return amountWei == 0 ? 0 : (totalFee * 10000) / amountWei;
+    }
+
+    function checkDepositInRange(uint256 amountWei) external pure returns (bool) {
+        return amountWei >= WF_MIN_DEPOSIT && amountWei <= WF_MAX_DEPOSIT_SINGLE;
+    }
+
+    function checkMinDeposit(uint256 amountWei) external pure returns (bool) {
+        return amountWei >= WF_MIN_DEPOSIT;
+    }
+
+    function checkMaxDeposit(uint256 amountWei) external pure returns (bool) {
+        return amountWei <= WF_MAX_DEPOSIT_SINGLE;
+    }
+
+    function getContractInfo() external view returns (
+        address treasuryAddr,
+        address registryAddr,
+        address feeVaultAddr,
+        uint256 genesisBlockNum,
+        address ownerAddr,
+        bool pausedState,
+        uint256 advisorTotal,
+        uint256 portfolioTotal,
+        uint256 depositsTotal,
+        uint256 withdrawnTotal,
+        uint256 feesTotal
+    ) {
+        return (
+            wfTreasury,
+            wfRegistryKeeper,
+            wfFeeVault,
+            wfGenesisBlock,
+            owner,
+            wfPaused,
+            advisorCount,
+            portfolioCount,
+            totalDeposits,
+            totalWithdrawn,
+            totalFeesCollected
+        );
+    }
+
+    function getImmutableConfig() external view returns (
+        address treasury_,
+        address registry_,
+        address feeVault_,
+        uint256 genesis_
+    ) {
